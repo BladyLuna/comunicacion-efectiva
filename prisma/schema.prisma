@@ -1,0 +1,162 @@
+// Esquema de dominio — Comunicación Efectiva
+// Convocatoria Diseño y Programación Web III · Gestión 2026
+// Autor: Bladimir Luna Corrales
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Categorías temáticas de la comunicación efectiva.
+enum Categoria {
+  ESCUCHA_ACTIVA
+  COMUNICACION_NO_VERBAL
+  ASERTIVIDAD
+  FEEDBACK
+  COMUNICACION_DIGITAL
+  BARRERAS
+}
+
+/// Nivel de dificultad de una pregunta del quiz.
+enum Dificultad {
+  BASICO
+  INTERMEDIO
+  AVANZADO
+}
+
+// ─────────────────────────────────────────────
+// SECCIÓN B — Contenido informativo
+// ─────────────────────────────────────────────
+
+/// Artículo educativo mostrado en la sección informativa.
+model Articulo {
+  id        Int       @id @default(autoincrement())
+  slug      String    @unique
+  titulo    String
+  resumen   String
+  cuerpo    String // markdown ligero
+  icono     String // emoji representativo
+  categoria Categoria
+  orden     Int       @default(0)
+  destacado Boolean   @default(false)
+  creadoEn  DateTime  @default(now())
+
+  @@index([categoria])
+  @@map("articulos")
+}
+
+/// Recurso externo de consulta (video, artículo, guía).
+model Recurso {
+  id          Int      @id @default(autoincrement())
+  titulo      String
+  descripcion String
+  url         String
+  tipo        String // VIDEO | ARTICULO | GUIA | PODCAST
+  fuente      String
+  creadoEn    DateTime @default(now())
+
+  @@map("recursos")
+}
+
+// ─────────────────────────────────────────────
+// SECCIÓN C — Quiz interactivo
+// ─────────────────────────────────────────────
+
+/// Pregunta del quiz, recuperada desde la base de datos.
+model Pregunta {
+  id          Int        @id @default(autoincrement())
+  enunciado   String
+  explicacion String // retroalimentación educativa tras responder
+  categoria   Categoria
+  dificultad  Dificultad @default(BASICO)
+  activa      Boolean    @default(true)
+  creadoEn    DateTime   @default(now())
+
+  opciones   Opcion[]
+  respuestas Respuesta[]
+
+  @@index([activa])
+  @@map("preguntas")
+}
+
+/// Opción de respuesta asociada a una pregunta.
+model Opcion {
+  id         Int     @id @default(autoincrement())
+  preguntaId Int
+  texto      String
+  esCorrecta Boolean @default(false)
+  orden      Int     @default(0)
+
+  pregunta   Pregunta    @relation(fields: [preguntaId], references: [id], onDelete: Cascade)
+  respuestas Respuesta[]
+
+  @@index([preguntaId])
+  @@map("opciones")
+}
+
+/// Intento completo de un participante: puntuación y resultado.
+model Intento {
+  id          Int      @id @default(autoincrement())
+  participante String
+  puntaje     Int
+  total       Int
+  porcentaje  Int
+  nivel       String // En desarrollo | Competente | Comunicador efectivo
+  duracionSeg Int      @default(0)
+  creadoEn    DateTime @default(now())
+
+  respuestas Respuesta[]
+
+  @@index([puntaje])
+  @@map("intentos")
+}
+
+/// Registro de cada respuesta individual dentro de un intento.
+model Respuesta {
+  id         Int      @id @default(autoincrement())
+  intentoId  Int
+  preguntaId Int
+  opcionId   Int
+  correcta   Boolean
+  creadoEn   DateTime @default(now())
+
+  intento  Intento  @relation(fields: [intentoId], references: [id], onDelete: Cascade)
+  pregunta Pregunta @relation(fields: [preguntaId], references: [id])
+  opcion   Opcion   @relation(fields: [opcionId], references: [id])
+
+  @@index([intentoId])
+  @@map("respuestas")
+}
+
+// ─────────────────────────────────────────────
+// SECCIÓN D — Desarrolladores
+// ─────────────────────────────────────────────
+
+/// Integrante del equipo de desarrollo.
+model Desarrollador {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  rol       String
+  bio       String
+  github    String?
+  avatar    String // emoji o inicial
+  creadoEn  DateTime @default(now())
+
+  @@map("desarrolladores")
+}
+
+/// Tecnología utilizada en el proyecto (créditos técnicos).
+model Tecnologia {
+  id          Int    @id @default(autoincrement())
+  nombre      String
+  categoria   String // Frontend | Backend | Base de datos | Despliegue
+  descripcion String
+  icono       String
+  orden       Int    @default(0)
+
+  @@map("tecnologias")
+}
